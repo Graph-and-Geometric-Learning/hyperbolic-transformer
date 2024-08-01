@@ -3,7 +3,11 @@
 This is the Pytorch implementation of [Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space](https://arxiv.org/abs/2407.01290) 
 Authors: Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
 
-> ⏰ The repository will be completed after the NeurIPS 2024 rebuttal and before KDD 2024 conference. Thank you for your interest and patience!
+## Updates(August 1, 2024)!
+- [x] Large-scale graph evaluation
+- [ ] Medium-scale graph evaluation
+- [ ] Simifiled version for other usage 
+
 
 ## 1. Requirements
 `pip install -r requirements.txt`
