@@ -5,8 +5,9 @@ Authors: Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, 
 
 ## Updates(August 1, 2024)!
 - [x] Large-scale graph evaluation
-- [ ] Medium-scale graph evaluation (To be updated next week.)
-- [ ] Simifiled version for other usage  (To be updated next week.)
+- [ ] Medium-scale graph evaluation (To be updated next week)
+- [ ] Simifiled version for other usage  (To be updated next week)
+- [ ] Baselines (To be updated next week)
 
 
 ## 1. Requirements
