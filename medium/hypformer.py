@@ -7,10 +7,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_sparse import SparseTensor, matmul
 from torch_geometric.utils import degree
-from manifolds.layer import HypLinear, HypLayerNorm, HypActivation, HypDropout, HypNormalization, HypCLS
+from manifolds.hyp_layer import HypLinear, HypLayerNorm, HypActivation, HypDropout, HypCLS
 from manifolds.lorentz import Lorentz
 from geoopt import ManifoldParameter
-from gnns import GraphConv
+from gnns import GraphConv, GCN
+
 
 class TransConvLayer(nn.Module):
     def __init__(self, manifold, in_channels, out_channels, num_heads, use_weight=True, args=None):
@@ -47,16 +48,15 @@ class TransConvLayer(nn.Module):
             for i in range(self.num_heads):
                 self.Wv.append(HypLinear(self.manifold, in_channels, out_channels))
 
-        self.scale = nn.Parameter(torch.tensor([math.sqrt(out_channels)]))
+        self.scale = nn.Parameter(torch.tensor([math.sqrt(out_channels)], requires_grad=True))
         self.bias = nn.Parameter(torch.zeros(()))
         self.norm_scale = nn.Parameter(torch.ones(()))
         self.v_map_mlp = nn.Linear(in_channels, out_channels, bias=True)
         self.power_k = args.power_k
         self.trans_heads_concat = args.trans_heads_concat
-        
-        if self.trans_heads_concat:
-            self.final_linear = nn.Linear(out_channels*self.num_heads, out_channels, bias=True)
 
+        if self.trans_heads_concat:
+            self.final_linear = nn.Linear(out_channels * self.num_heads, out_channels, bias=True)
 
     def full_attention(self, qs, ks, vs, output_attn=False):
         # normalize input
@@ -82,46 +82,47 @@ class TransConvLayer(nn.Module):
         norm_x = torch.norm(x, p=2, dim=-1, keepdim=True)
         norm_x_p = torch.norm(x ** p, p=2, dim=-1, keepdim=True)
         return (norm_x / norm_x_p) * x ** p
-    
+
     def linear_focus_attention(self, hyp_qs, hyp_ks, hyp_vs, output_attn=False):
-            qs = hyp_qs[..., 1:]
-            ks = hyp_ks[..., 1:]
-            v = hyp_vs[..., 1:]
-            phi_qs = (F.relu(qs) + 1e-6) / (self.norm_scale.abs() + 1e-6)  # [N, H, D]
-            phi_ks = (F.relu(ks) + 1e-6) / (self.norm_scale.abs() + 1e-6)  # [N, H, D]
+        qs = hyp_qs[..., 1:]
+        ks = hyp_ks[..., 1:]
+        v = hyp_vs[..., 1:]
 
-            phi_qs = self.fp(phi_qs, p=self.power_k)  # [N, H, D]
-            phi_ks = self.fp(phi_ks, p=self.power_k)  # [N, H, D]
+        phi_qs = (F.relu(qs) + 1e-6) / self.norm_scale.abs()  # [N, H, D]
+        phi_ks = (F.relu(ks) + 1e-6) / self.norm_scale.abs()  # [N, H, D]
 
-            # Step 1: Compute the kernel-transformed sum of K^T V across all N for each head
-            k_transpose_v = torch.einsum('nhm,nhd->hmd', phi_ks, v)  # [H, D, D]
+        phi_qs = self.fp(phi_qs, p=self.power_k)  # [N, H, D]
+        phi_ks = self.fp(phi_ks, p=self.power_k)  # [N, H, D]
 
-            # Step 2: Compute the kernel-transformed dot product of Q with the above result
-            numerator = torch.einsum('nhm,hmd->nhd', phi_qs, k_transpose_v)  # [N, H, D]
+        # Step 1: Compute the kernel-transformed sum of K^T V across all N for each head
+        k_transpose_v = torch.einsum('nhm,nhd->hmd', phi_ks, v)  # [H, D, D] 
 
-            # Step 3: Compute the normalizing factor as the kernel-transformed sum of K
-            denominator = torch.einsum('nhd,hd->nh', phi_qs, torch.einsum('nhd->hd', phi_ks))  # [N, H]
-            denominator = denominator.unsqueeze(-1)  #
+        # Step 2: Compute the kernel-transformed dot product of Q with the above result
+        numerator = torch.einsum('nhm,hmd->nhd', phi_qs, k_transpose_v)  # [N, H, D]
 
-            # Step 4: Normalize the numerator with the denominator
-            attn_output = numerator / (denominator + 1e-6)  # [N, H, D]
+        # Step 3: Compute the normalizing factor as the kernel-transformed sum of K
+        denominator = torch.einsum('nhd,hd->nh', phi_qs, torch.einsum('nhd->hd', phi_ks))  # [N, H]
+        denominator = denominator.unsqueeze(-1)  # [N, H, D] for broadcasting
 
-            # Map vs through v_map_mlp and ensure it is the correct shape
-            vss = self.v_map_mlp(v)  # [N, H, D]
-            attn_output = attn_output + vss  # preserve its rank, [N, H, D]
+        # Step 4: Normalize the numerator with the denominator
+        attn_output = numerator / (denominator + 1e-6)  # [N, H, D]
 
-            if self.trans_heads_concat:
-                attn_output = self.final_linear(attn_output.reshape(-1, self.num_heads * self.out_channels))
-            else:
-                attn_output = attn_output.mean(dim=1)
+        # Map vs through v_map_mlp and ensure it is the correct shape
+        vss = self.v_map_mlp(v)  # [N, H, D]
+        attn_output = attn_output + vss  # preserve its rank, [N, H, D]
 
-            attn_output_time = ((attn_output ** 2).sum(dim=-1, keepdims=True) + self.manifold.k) ** 0.5
-            attn_output = torch.cat([attn_output_time, attn_output], dim=-1)
+        if self.trans_heads_concat:
+            attn_output = self.final_linear(attn_output.reshape(-1, self.num_heads * self.out_channels))
+        else:
+            attn_output = attn_output.mean(dim=1)
 
-            if output_attn:
-                return attn_output, attn_output
-            else:
-                return attn_output
+        attn_output_time = ((attn_output ** 2).sum(dim=-1, keepdims=True) + self.manifold.k) ** 0.5
+        attn_output = torch.cat([attn_output_time, attn_output], dim=-1)
+
+        if output_attn:
+            return attn_output, attn_output
+        else:
+            return attn_output
 
     def forward(self, query_input, source_input, edge_index=None, edge_weight=None, output_attn=False):
         # feature transformation
@@ -155,14 +156,9 @@ class TransConvLayer(nn.Module):
                     query, key, value)  # [N, H, D]
             elif self.attention_type == 'full':
                 attention_output = self.full_attention(
-                    query, key, value)
-            else:
-                raise NotImplementedError
-
+                    query, key, value)  # [N, H, D]
 
         final_output = attention_output
-        # multi-head attention aggregation
-        # final_output = self.manifold.mid_point(final_output)
 
         if output_attn:
             return final_output, attn
@@ -171,22 +167,21 @@ class TransConvLayer(nn.Module):
 
 
 class TransConv(nn.Module):
-    def __init__(self, manifold_in, manifold_hidden, manifold_out, in_channels, hidden_channels, num_layers=2, num_heads=1,
-                 dropout=0.5, use_bn=True, use_residual=True, use_weight=True, use_act=True, args=None):
+    def __init__(self, manifold_in, manifold_hidden, manifold_out, in_channels, hidden_channels, args=None):
         super().__init__()
         self.manifold_in = manifold_in
         self.manifold_hidden = manifold_hidden
         self.manifold_out = manifold_out
-        
+
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
-        self.num_layers = num_layers
-        self.num_heads = num_heads
-        self.dropout_rate = dropout
-        self.use_bn = use_bn
-        self.residual = use_residual
-        self.use_act = use_act
-        self.use_weight = use_weight
+        self.num_layers = args.trans_num_layers
+        self.num_heads = args.trans_num_heads
+        self.dropout_rate = args.trans_dropout
+        self.use_bn = args.trans_use_bn
+        self.residual = args.trans_use_residual
+        self.use_act = args.trans_use_act
+        self.use_weight = args.trans_use_weight
 
         self.convs = nn.ModuleList()
         self.fcs = nn.ModuleList()
@@ -196,13 +191,15 @@ class TransConv(nn.Module):
         self.bns.append(HypLayerNorm(self.manifold_hidden, self.hidden_channels))
 
         self.add_pos_enc = args.add_positional_encoding
-        self.positional_encoding = HypLinear(self.manifold_in, self.in_channels, self.hidden_channels, self.manifold_hidden)
+        self.positional_encoding = HypLinear(self.manifold_in, self.in_channels, self.hidden_channels,
+                                             self.manifold_hidden)
         self.epsilon = torch.tensor([1.0], device=args.device)
 
         for i in range(self.num_layers):
             self.convs.append(
-                TransConvLayer(self.manifold_hidden, self.hidden_channels, self.hidden_channels, 
-                               num_heads=self.num_heads, use_weight=self.use_weight, args=args))
+                TransConvLayer(self.manifold_hidden, self.hidden_channels, self.hidden_channels,
+                               num_heads=self.num_heads,
+                               use_weight=self.use_weight, args=args))
             self.bns.append(HypLayerNorm(self.manifold_hidden, self.hidden_channels))
 
         self.dropout = HypDropout(self.manifold_hidden, self.dropout_rate)
@@ -218,24 +215,25 @@ class TransConv(nn.Module):
         # add positional embedding
         if self.add_pos_enc:
             x_pos = self.positional_encoding(x_input, x_manifold='euc')
-            x = self.manifold_hidden.mid_point(torch.stack((x, self.epsilon*x_pos), dim=1))
+            x = self.manifold_in.mid_point(torch.stack((x, self.epsilon * x_pos), dim=1))
 
         if self.use_bn:
             x = self.bns[0](x)
         if self.use_act:
             x = self.activation(x)
-        x = self.dropout(x, training=self.training)
+        if self.dropout_rate > 0:
+            x = self.dropout(x, training=self.training)
         layer_.append(x)
-
         for i, conv in enumerate(self.convs):
             x = conv(x, x)
             if self.residual:
-                x = self.manifold_hidden.mid_point(torch.stack((x, layer_[i]), dim=1))
+                x = self.manifold_in.mid_point(torch.stack((x, layer_[i]), dim=1))
             if self.use_bn:
                 x = self.bns[i + 1](x)
             # if self.use_act:
             #     x = self.activation(x)
-            # # x = self.dropout(x, training=self.training)
+            # if self.dropout_rate > 0:
+            #     x = self.dropout(x, training=self.training)
             layer_.append(x)
 
         x = self.fcs[-1](x)
@@ -252,38 +250,33 @@ class TransConv(nn.Module):
             x, attn = conv(x, x, output_attn=True)
             attentions.append(attn)
             if self.residual:
-                x = self.manifold_hidden.mid_point(torch.stack((x, layer_[i]), dim=1))
+                x = self.manifold.mid_point(torch.stack((x, layer_[i]), dim=1))
             if self.use_bn:
                 x = self.bns[i + 1](x)
             layer_.append(x)
         return torch.stack(attentions, dim=0)  # [layer num, N, N]
 
+
 class HypFormer(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels,
-                 trans_num_layers=1, trans_num_heads=1, trans_dropout=0.5, trans_use_bn=True, trans_use_residual=True,
-                 trans_use_weight=True, trans_use_act=True,
-                 gnn_num_layers=1, gnn_dropout=0.5, gnn_use_weight=True, gnn_use_init=False, gnn_use_bn=True,
-                 gnn_use_residual=True, gnn_use_act=True,
-                 use_graph=True, graph_weight=0.5, aggregate='add', args=None):
+    def __init__(self, args):
         super().__init__()
         self.manifold_in = Lorentz(k=float(args.k_in))
-        # self.manifold_hidden = Lorentz(k=float(args.k_in))
         self.manifold_hidden = Lorentz(k=float(args.k_out))
+        self.manifold_out = Lorentz(k=float(args.k_out))
+
+        self.in_channels = args.in_channels
+        self.hidden_channels = args.hidden_channels
+        self.out_channels = args.out_channels
+        self.use_graph = args.use_graph
+        self.graph_weight = args.graph_weight
+
+        # self.aggregate_type = args.aggregate_type
         self.decoder_type = args.decoder_type
 
-        self.manifold_out = Lorentz(k=float(args.k_out))
-        self.in_channels = in_channels
-        self.hidden_channels = hidden_channels
-        self.out_channels = out_channels
-        self.use_graph = use_graph
-        self.graph_weight = graph_weight
-
-        self.trans_conv = TransConv(self.manifold_in, self.manifold_hidden, self.manifold_out, in_channels, hidden_channels, trans_num_layers, trans_num_heads, trans_dropout, trans_use_bn, trans_use_residual, trans_use_weight, trans_use_act, args)
-        self.graph_conv = GraphConv(in_channels, hidden_channels, gnn_num_layers, gnn_dropout, gnn_use_bn, gnn_use_residual, gnn_use_weight, gnn_use_init, gnn_use_act)
-
-        self.aggregate = aggregate
-        self.use_edge_loss = False
-        self.gnn_use_bn = gnn_use_bn
+        self.trans_conv = TransConv(self.manifold_in, self.manifold_hidden, self.manifold_out, self.in_channels,
+                                    self.hidden_channels, args=args)
+        # self.graph_conv = GCN(self.in_channels, self.hidden_channels, self.out_channels, args=args) if args.use_graph else None
+        self.graph_conv = GraphConv(self.in_channels, self.hidden_channels, args=args) if self.use_graph else None
 
         if self.decoder_type == 'euc':
             self.decode_trans = nn.Linear(self.hidden_channels, self.out_channels)
@@ -294,15 +287,18 @@ class HypFormer(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, x, edge_index):
-        x1 = self.trans_conv(x)
+    def forward(self, dataset):
+        x, edge_index = dataset.graph['node_feat'], dataset.graph['edge_index'][0]
+        x1 = self.trans_conv(x)  # hyperbolic Transformer encoder
+
         if self.use_graph:
-            x2 = self.graph_conv(x, edge_index)
+            x2 = self.graph_conv(x, edge_index)  # Graph encoder
             if self.decoder_type == 'euc':
-                x = (1 - self.graph_weight) * self.decode_trans(self.manifold_out.logmap0(x1)[..., 1:]) + self.graph_weight * self.decode_graph(x2)
+                x = (1 - self.graph_weight) * self.decode_trans(
+                    self.manifold_out.logmap0(x1)[..., 1:]) + self.graph_weight * self.decode_graph(x2)
             elif self.decoder_type == 'hyp':
                 z_graph_hyp = self.decode_graph(x2, x_manifold='euc')
-                z_hyp = torch.stack([(1-self.graph_weight)*x1, self.graph_weight*z_graph_hyp], dim=1)
+                z_hyp = torch.stack([(1 - self.graph_weight) * x1, self.graph_weight * z_graph_hyp], dim=1)
                 z = self.manifold_out.mid_point(z_hyp)
                 x = self.decode_trans(z)
             else:
@@ -319,9 +315,3 @@ class HypFormer(nn.Module):
     def get_attentions(self, x):
         attns = self.trans_conv.get_attentions(x)  # [layer num, N, N]
         return attns
-
-    def reset_parameters(self):
-        # self.trans_conv.reset_parameters()
-        if self.use_graph:
-            self.graph_conv.reset_parameters()
-        # self.fc.reset_parameters()

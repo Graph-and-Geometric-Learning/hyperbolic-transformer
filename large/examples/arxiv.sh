@@ -28,7 +28,8 @@ python main.py \
   --use_graph 1 \
   --graph_weight $graph_weight \
   --seed 123 \
-  --runs 5 \
+  --runs 1 \
+  --save_result 0 \
   --epochs 1000 \
   --eval_step 1 \
   --device 0 \

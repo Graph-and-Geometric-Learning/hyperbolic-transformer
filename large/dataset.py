@@ -243,7 +243,7 @@ def load_deezer_dataset(data_dir):
     
     filename = 'deezer-europe'
     dataset = NCDataset(filename)
-    deezer = scipy.io.loadmat(f'{data_dir}deezer/deezer-europe.mat')
+    deezer = scipy.io.loadmat(f'{data_dir}/deezer/deezer-europe.mat')
 
     A, label, features = deezer['A'], deezer['label'], deezer['features']
     edge_index = torch.tensor(A.nonzero(), dtype=torch.long)
@@ -262,7 +262,7 @@ def load_deezer_dataset(data_dir):
 def load_arxiv_year_dataset(data_dir, nclass=5):
     filename = 'arxiv-year'
     dataset = NCDataset(filename)
-    ogb_dataset = NodePropPredDataset(name='ogbn-arxiv', root=f'{data_dir}ogb')
+    ogb_dataset = NodePropPredDataset(name='ogbn-arxiv', root=f'{data_dir}/ogb')
     dataset.graph = ogb_dataset.graph
     dataset.graph['edge_index'] = torch.as_tensor(dataset.graph['edge_index'])
     dataset.graph['node_feat'] = torch.as_tensor(dataset.graph['node_feat'])
@@ -281,7 +281,7 @@ def load_amazon2m_dataset(data_dir):
     dataset.label = torch.as_tensor(ogb_dataset.labels).reshape(-1, 1)
 
     def load_fixed_splits(train_prop=0.5, val_prop=0.25):
-        dir = f'{data_dir}ogb/ogbn_products/split/random_0.5_0.25'
+        dir = f'{data_dir}/ogb/ogbn_products/split/random_0.5_0.25'
         tensor_split_idx = {}
         if os.path.exists(dir):
             tensor_split_idx['train'] = torch.as_tensor(np.loadtxt(dir + '/amazon2m_train.txt'), dtype=torch.long)
@@ -329,7 +329,7 @@ def load_papers100M(data_dir):
 
 
 def load_proteins_dataset(data_dir):
-    ogb_dataset = NodePropPredDataset(name='ogbn-proteins', root=f'{data_dir}ogb')
+    ogb_dataset = NodePropPredDataset(name='ogbn-proteins', root=f'{data_dir}/ogb')
     dataset = NCDataset('ogbn-proteins')
     def protein_orig_split(**kwargs):
         split_idx = ogb_dataset.get_idx_split()
@@ -353,7 +353,7 @@ def load_proteins_dataset(data_dir):
 
 def load_ogb_dataset(data_dir, name):
     dataset = NCDataset(name)
-    ogb_dataset = NodePropPredDataset(name=name, root=f'{data_dir}ogb')
+    ogb_dataset = NodePropPredDataset(name=name, root=f'{data_dir}/ogb')
     dataset.graph = ogb_dataset.graph
     dataset.graph['edge_index'] = torch.as_tensor(dataset.graph['edge_index'])
     dataset.graph['node_feat'] = torch.as_tensor(dataset.graph['node_feat'])
@@ -417,7 +417,7 @@ def load_pokec_mat(data_dir):
     return dataset
 
 def load_snap_patents_mat(data_dir, nclass=5):
-    if not path.exists(f'{data_dir}snap_patents.mat'):
+    if not path.exists(f'{data_dir}/snap_patents.mat'):
         p = dataset_drive_url['snap-patents']
         print(f"Snap patents url: {p}")
         gdd.download_file_from_google_drive(
@@ -444,7 +444,7 @@ def load_snap_patents_mat(data_dir, nclass=5):
 
 
 def load_yelpchi_dataset(data_dir):
-    if not path.exists(f'{data_dir}YelpChi.mat'):
+    if not path.exists(f'{data_dir}/YelpChi.mat'):
             gdd.download_file_from_google_drive(
                 file_id= dataset_drive_url['yelp-chi'], \
                 dest_path=f'{data_dir}YelpChi.mat', showsize=True)
@@ -469,7 +469,7 @@ def load_yelpchi_dataset(data_dir):
 
 def load_planetoid_dataset(data_dir, name):
     transform = T.NormalizeFeatures()
-    torch_dataset = Planetoid(root=f'{data_dir}Planetoid',
+    torch_dataset = Planetoid(root=f'{data_dir}/Planetoid',
                              name=name, transform=transform)
     # torch_dataset = Planetoid(root=f'{DATAPATH}Planetoid', name=name)
     data = torch_dataset[0]
@@ -496,10 +496,10 @@ def load_planetoid_dataset(data_dir, name):
 def load_amazon_dataset(data_dir, name):
     transform = T.NormalizeFeatures()
     if name == 'amazon-photo':
-        torch_dataset = Amazon(root=f'{data_dir}Amazon',
+        torch_dataset = Amazon(root=f'{data_dir}/Amazon',
                                  name='Photo', transform=transform)
     elif name == 'amazon-computer':
-        torch_dataset = Amazon(root=f'{data_dir}Amazon',
+        torch_dataset = Amazon(root=f'{data_dir}/Amazon',
                                  name='Computers', transform=transform)
     # torch_dataset = Planetoid(root=f'{DATAPATH}Planetoid', name=name)
     data = torch_dataset[0]
@@ -522,10 +522,10 @@ def load_amazon_dataset(data_dir, name):
 def load_coauthor_dataset(data_dir, name):
     transform = T.NormalizeFeatures()
     if name == 'coauthor-cs':
-        torch_dataset = Coauthor(root=f'{data_dir}Coauthor',
+        torch_dataset = Coauthor(root=f'{data_dir}/Coauthor',
                                  name='CS', transform=transform)
     elif name == 'coauthor-physics':
-        torch_dataset = Coauthor(root=f'{data_dir}Coauthor',
+        torch_dataset = Coauthor(root=f'{data_dir}/Coauthor',
                                  name='Physics', transform=transform)
     # torch_dataset = Planetoid(root=f'{DATAPATH}Planetoid', name=name)
     data = torch_dataset[0]
@@ -546,8 +546,8 @@ def load_coauthor_dataset(data_dir, name):
     return dataset
 
 def load_geom_gcn_dataset(data_dir, name):
-    graph_adjacency_list_file_path = f'{data_dir}geom-gcn/{name}/out1_graph_edges.txt'
-    graph_node_features_and_labels_file_path = f'{data_dir}geom-gcn/{name}/out1_node_feature_label.txt'
+    graph_adjacency_list_file_path = f'{data_dir}/geom-gcn/{name}/out1_graph_edges.txt'
+    graph_node_features_and_labels_file_path = f'{data_dir}/geom-gcn/{name}/out1_node_feature_label.txt'
 
     G = nx.DiGraph()
     graph_node_features_dict = {}

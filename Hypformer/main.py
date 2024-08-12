@@ -1,19 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# from torch_geometric.data import Data
 
 from hypformer import HypFormer
 
 torch.manual_seed(42)
 
-# Generate pseudo input data, this data is n by d, which is a little different with the image data
-num_nodes = 10
+# Generate pseudo input data, this data is n by d
+num_sample = 10
 num_features = 16
 num_classes = 5
 
 # Generate random node features
-x = torch.randn(num_nodes, num_features)
+x = torch.randn(num_sample, num_features)
 
 # Define model parameters
 in_channels = num_features
@@ -46,16 +45,6 @@ model = HypFormer(
     trans_use_residual=True,
     trans_use_weight=True,
     trans_use_act=True,
-    gnn_num_layers=2,
-    gnn_dropout=0.1,
-    gnn_use_weight=True,
-    gnn_use_init=False,
-    gnn_use_bn=True,
-    gnn_use_residual=True,
-    gnn_use_act=True,
-    use_graph=True,
-    graph_weight=0.5,
-    aggregate='add',
     args=args
 )
 

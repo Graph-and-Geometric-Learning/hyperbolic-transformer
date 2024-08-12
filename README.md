@@ -1,39 +1,95 @@
-## [Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space (KDD 2024)](https://arxiv.org/abs/2407.01290)
+# Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space
 
-This is the Pytorch implementation of [Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space](https://arxiv.org/abs/2407.01290) 
-Authors: Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
+[![arXiv](https://img.shields.io/badge/arXiv-2407.01290-b31b1b.svg)](https://arxiv.org/abs/2407.01290)
+[![Conference](https://img.shields.io/badge/KDD-2024-blue)](https://kdd.org/kdd2024/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Updates(August 1, 2024)!
+This is the PyTorch implementation of the paper ["Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space"](https://arxiv.org/abs/2407.01290) to be presented at KDD 2024.
+
+## Authors
+
+Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
+
+## Framework
+
+![framework](./figures/framework.jpg)
+
+## Updates (August 12, 2024 🔥)
+
 - [x] Large-scale graph evaluation
-- [ ] Medium-scale graph evaluation (To be updated next week)
-- [ ] Simifiled version for other usage  (To be updated next week)
-- [ ] Baselines (To be updated next week)
-
+- [x] Medium-scale graph evaluation
+- [x] Simplified version for other usage
+- [ ] Baselines (To be updated)
 
 ## 1. Requirements
-`pip install -r requirements.txt`
+
+To install the required packages, run:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## 2. Dataset
-Please check the `./data` folder
+
+Please check the `./data` folder for available datasets.
+
+Note: OGB datasets will be downloaded automatically when needed.
 
 ## 3. Running Hyperbolic Transformer
 
-    ```shell
-    cd large
-    bash example/amazon2M.sh 
+The code has been evaluated on NVIDIA A40 and A100 GPUs.
 
-    bash example/arxiv.sh.sh
-    ```
-## 4. Reusing Hyperbolic Transformer for your research
+To run the code:
 
-- check Hypformer folder
+1. Navigate to the `large` or `medium` directory:
+   ```bash
+   cd large
+   ```
+
+2. Check the `example` folder, where the `5-runs` folder contains scripts to get averaged results.
+
+3. For a single run, execute one of the following commands:
+   ```bash
+   bash example/amazon2M.sh
+   bash example/arxiv.sh
+   bash example/proteins.sh
+   ```
+
+## 4. Reusing Hyperbolic Transformer for Your Research
+
+For integration into your own research, please refer to the `./Hypformer` folder.
+
+## 5. Acknowledgments
+
+This project was heavily built upon the following projects. We thank the authors for their awesome contributions:
+
+- SGFormer - https://github.com/qitianwu/SGFormer
+- HGCN - https://github.com/HazyResearch/hgcn/tree/master
+- fully HNN - https://github.com/chenweize1998/fully-hyperbolic-nn
+- Open Graph Benchmark - https://ogb.stanford.edu/
+- Geoopt - https://github.com/geoopt/geoopt
+- GrapGPS - https://github.com/rampasek/GraphGPS
+- Graphformer - https://github.com/microsoft/GraphFormers
+- GraphTrans - https://github.com/ucbrise/graphtrans
+- Nodeformer - https://github.com/qitianwu/NodeFormer
 
 ## Citation
+
+If you find this work useful in your research, please consider citing our paper:
 
 ```bibtex
 @inproceedings{yang2022hypformer,
   title={Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space},
   author={Yang, Menglin and Verma, Harshit and Zhang, Delvin Ce and Liu, Jiahong and King, Irwin and Ying, Rex},
   booktitle={Proceedings of the 2024 ACM SIGKDD International Conference on Knowledge Discovery and Data Mining},
+  year={2024}
 }
 ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For any questions or concerns, please open an issue in this repository or contact menglin.yang@{yale.edu,outlook.com}

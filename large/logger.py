@@ -151,12 +151,13 @@ class Logger(object):
 
 import os
 def save_result(args, results):
-    if not os.path.exists(f'results/{args.dataset}'):
-        os.makedirs(f'results/{args.dataset}')
-    filename = f'results/{args.dataset}/{args.method}.csv'
-    print(f"Saving results to {filename}")
-    with open(f"{filename}", 'a+') as write_obj:
-        write_obj.write(
-            f"{args.method} " + f"{args.kernel}: " + f"{args.weight_decay} " + f"{args.dropout} " + \
-            f"{args.num_layers} " + f"{args.alpha}: " + f"{args.hidden_channels}: " + \
-            f"{results.mean():.2f} $\pm$ {results.std():.2f} \n")
+    if args.save_result:
+        if not os.path.exists(f'results/{args.dataset}'):
+            os.makedirs(f'results/{args.dataset}')
+        filename = f'results/{args.dataset}/{args.method}.csv'
+        print(f"Saving results to {filename}")
+        with open(f"{filename}", 'a+') as write_obj:
+            write_obj.write(
+                f"{args.method} " + f"{args.kernel}: " + f"{args.weight_decay} " + f"{args.dropout} " + \
+                f"{args.num_layers} " + f"{args.alpha}: " + f"{args.hidden_channels}: " + \
+                f"{results.mean():.2f} $\pm$ {results.std():.2f} \n")

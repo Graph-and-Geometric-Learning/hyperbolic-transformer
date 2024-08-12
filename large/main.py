@@ -35,7 +35,7 @@ def fix_seed(seed):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Training Pipeline for Node Classification')
+    parser = argparse.ArgumentParser(description='General Training Pipeline')
     parser_add_main_args(parser)
     return parser.parse_args()
 
@@ -245,10 +245,12 @@ def display_evaluation_results(epoch, result, split_idx, degrees, threshold, los
 
     max_top_acc = top_indices.shape[0] / split_idx['test'].shape[0]
     max_bottom_acc = bottom_indices.shape[0] / split_idx['test'].shape[0]
+    # print_str = (f'👉Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {100 * result[0]:.2f}%, '
+    #              f'Valid: {100 * result[1]:.2f}%, Test: {100 * result[2]:.2f}%, '
+    #              f'Top: {100 * result[5]:.2f} | {100 * max_top_acc:.2f}%, '
+    #              f'Bottom: {100 * result[6]:.2f} | {100 * max_bottom_acc:.2f}%')
     print_str = (f'👉Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {100 * result[0]:.2f}%, '
-                 f'Valid: {100 * result[1]:.2f}%, Test: {100 * result[2]:.2f}%, '
-                 f'Top: {100 * result[5]:.2f} | {100 * max_top_acc:.2f}%, '
-                 f'Bottom: {100 * result[6]:.2f} | {100 * max_bottom_acc:.2f}%')
+                 f'Valid: {100 * result[1]:.2f}%, Test: {100 * result[2]:.2f}%')
     print(print_str)
 
 

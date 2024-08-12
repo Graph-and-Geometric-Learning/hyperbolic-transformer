@@ -238,12 +238,31 @@ class TransConv(nn.Module):
         return torch.stack(attentions, dim=0)  # [layer num, N, N]
 
 class HypFormer(nn.Module):
+    
     def __init__(self, in_channels, hidden_channels, out_channels,
                  trans_num_layers=1, trans_num_heads=1, trans_dropout=0.5, trans_use_bn=True, trans_use_residual=True,
                  trans_use_weight=True, trans_use_act=True,
-                 gnn_num_layers=1, gnn_dropout=0.5, gnn_use_weight=True, gnn_use_init=False, gnn_use_bn=True,
-                 gnn_use_residual=True, gnn_use_act=True,
-                 use_graph=True, graph_weight=0.5, aggregate='add', args=None):
+                 args=None):
+        """
+        Initializes a HypFormer object.
+
+        Args:
+            in_channels (int): The number of input channels.
+            hidden_channels (int): The number of hidden channels.
+            out_channels (int): The number of output channels.
+            trans_num_layers (int, optional): The number of layers in the TransConv module. Defaults to 1.
+            trans_num_heads (int, optional): The number of attention heads in the TransConv module. Defaults to 1.
+            trans_dropout (float, optional): The dropout rate in the TransConv module. Defaults to 0.5.
+            trans_use_bn (bool, optional): Whether to use batch normalization in the TransConv module. Defaults to True.
+            trans_use_residual (bool, optional): Whether to use residual connections in the TransConv module. Defaults to True.
+            trans_use_weight (bool, optional): Whether to use learnable weights in the TransConv module. Defaults to True.
+            trans_use_act (bool, optional): Whether to use activation functions in the TransConv module. Defaults to True.
+            args (optional): Additional arguments.
+
+        Raises:
+            NotImplementedError: If the decoder_type is not 'euc' or 'hyp'.
+
+        """
         super().__init__()
         self.manifold_in = Lorentz(k=float(args.k_in))
         # self.manifold_hidden = Lorentz(k=float(args.k_in))
@@ -254,14 +273,10 @@ class HypFormer(nn.Module):
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
         self.out_channels = out_channels
-        self.use_graph = use_graph
-        self.graph_weight = graph_weight
 
         self.trans_conv = TransConv(self.manifold_in, self.manifold_hidden, self.manifold_out, in_channels, hidden_channels, trans_num_layers, trans_num_heads, trans_dropout, trans_use_bn, trans_use_residual, trans_use_weight, trans_use_act, args)
 
         self.aggregate = aggregate
-        self.use_edge_loss = False
-        self.gnn_use_bn = gnn_use_bn
 
         if self.decoder_type == 'euc':
             self.decode_trans = nn.Linear(self.hidden_channels, self.out_channels)

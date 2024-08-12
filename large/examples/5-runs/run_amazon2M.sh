@@ -28,8 +28,7 @@ python main-batch.py \
   --graph_weight $graph_weight \
   --batch_size 100000 \
   --seed 123 \
-  --runs 1 \
-  --save_result 0 \
+  --runs 5 \
   --epochs 200 \
   --eval_step 1 \
   --device 0 \

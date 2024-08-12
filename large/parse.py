@@ -1,4 +1,4 @@
-from gnns import *
+
 from hypformer import HypFormer
 
 def parse_method(args, c, d, device):
@@ -109,7 +109,7 @@ def parser_add_main_args(parser):
     parser.add_argument('--wandb_name', type=str, default='0', help='Weights and Biases project name (default: 0)')
     parser.add_argument('--power_k', type=float, default=2.0, help='Power k for query and key (default: 2.0)')
     parser.add_argument('--attention_type', type=str, default='linear_focused',
-                        help='Attention type: linear_focused, linear, or full (default: linear_focused)')
+                        help='Attention type: linear_focused, or full (default: linear_focused)')
     parser.add_argument('--run_id', type=str, default='0', help='Run ID (default: 0)')
     parser.add_argument('--save_whole_test_result', type=int, default=1, help='Save whole test result (default: 1)')
     parser.add_argument('--decoder_type', type=str, default='euc', help='Decoder type (default: euc)')
