@@ -18,7 +18,8 @@ Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
 
 - [x] Large-scale graph evaluation
 - [x] Medium-scale graph evaluation
-- [x] Simplified version for other usage
+- [ ] Image and text data evaluation
+- [x] Simplified version for reusage
 - [ ] Baselines (To be updated)
 
 ## 1. Requirements
