@@ -14,8 +14,7 @@ from dataset import load_nc_dataset
 from logger import Logger
 from parse import parse_method, parser_add_main_args
 from sklearn.neighbors import kneighbors_graph
-from torch_geometric.utils import (add_self_loops, remove_self_loops,
-                                   to_undirected)
+
 from manifolds.hyp_layer import Optimizer
 
 warnings.filterwarnings('ignore')
@@ -144,21 +143,16 @@ for run in range(args.runs):
     # delete the model and optimizer and start a new run
     del model, optimizer
 
-results = logger.print_statistics()
-print(results)
+if args.runs > 1:
+    results = logger.print_statistics()
+    print('====================')
+    print(results)
+    print('====================')
+
+
 out_folder = 'results'
 if not os.path.exists(out_folder):
     os.mkdir(out_folder)
-
-
-def make_print(method):
-    print_str = ''
-    if args.rand_split_class:
-        print_str += f'label per class:{args.label_num_per_class}, valid:{args.valid_num},test:{args.test_num}\n'
-    else:
-        print_str += f'method: {args.method} hidden: {args.hidden_channels} lr:{args.lr}\n'
-    return print_str
-
 
 if args.save_result:
     mkdirs(f'results/{args.dataset}')

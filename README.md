@@ -14,7 +14,7 @@ Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
 
 ![framework](./figures/framework.jpg)
 
-## Updates (August 12, 2024 🔥)
+## Updates (August 16, 2024 🔥)
 
 - [x] Large-scale graph evaluation
 - [x] Medium-scale graph evaluation
@@ -35,9 +35,9 @@ Please check the `./data` folder for available datasets.
 
 Note: OGB datasets will be downloaded automatically when needed.
 
-## 3. Running Hyperbolic Transformer
+## 3. Run Hyperbolic Transformer
 
-The code has been evaluated on NVIDIA A40 and A100 GPUs.
+The code has been evaluated on NVIDIA A100 GPUs.
 
 To run the code:
 
@@ -55,9 +55,44 @@ To run the code:
    bash example/proteins.sh
    ```
 
-## 4. Reusing Hyperbolic Transformer for Your Research
+## 4. Reuse Hyperbolic Transformer Modules
 
-For integration into your own research, please refer to the `./Hypformer` folder.
+To reuse the Hyperbolic Transformer modules, please check the folder `./Hypformer`
+
+for example:
+`Hyperbolic LayerNorm` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
+
+```python
+import torch
+import torch.nn as nn
+class HypLayerNorm(nn.Module):
+    def __init__(self, manifold, in_features, manifold_out=None):
+        super(HypLayerNorm, self).__init__()
+        self.in_features = in_features
+        self.manifold = manifold
+        self.manifold_out = manifold_out
+        self.layer = nn.LayerNorm(self.in_features)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.layer.reset_parameters()
+
+    def forward(self, x):
+        x_space = x[..., 1:]
+        x_space = self.layer(x_space)
+        x_time = ((x_space**2).sum(dim=-1, keepdims=True) + self.manifold.k).sqrt()
+        x = torch.cat([x_time, x_space], dim=-1)
+
+        if self.manifold_out is not None:
+            x = x * (self.manifold_out.k / self.manifold.k).sqrt()
+        return x
+```
+
+- `Hyperbolic Linear Transformation` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
+- `Hyperbolic Dropout Operations` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
+- `Hyperbolic Activation Operations` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
+- `Hyperbolic Classification Layer` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
+- `Hyperbolic full/linear Attention` in [hypforemr.py](./Hypformer/hypformer.py)
 
 ## 5. Acknowledgments
 
@@ -88,7 +123,7 @@ If you find this work useful in your research, please consider citing our paper:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
 ## Contact
 

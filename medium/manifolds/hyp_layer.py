@@ -155,9 +155,9 @@ class Optimizer(object):
     def __init__(self, model, args):
         # Extract optimizer types and parameters from arguments
         euc_optimizer_type = getattr(args, 'euc_optimizer_type', args.optimizer_type)  # Euclidean optimizer type
-        hyp_optimizer_type = getattr(args, 'hyp_optimizer_type', args.optimizer_type)  # Hyperbolic optimizer type
+        hyp_optimizer_type = getattr(args, 'hyp_optimizer_type', args.hyp_optimizer_type)  # Hyperbolic optimizer type
         euc_lr = getattr(args, 'euc_lr', args.lr)  # Euclidean learning rate
-        hyp_lr = getattr(args, 'hyp_lr', args.lr)  # Hyperbolic learning rate
+        hyp_lr = getattr(args, 'hyp_lr', args.hyp_lr)  # Hyperbolic learning rate
         euc_weight_decay = getattr(args, 'euc_weight_decay', args.weight_decay)  # Euclidean weight decay
         hyp_weight_decay = getattr(args, 'hyp_weight_decay', args.hyp_weight_decay)  # Hyperbolic weight decay
 
@@ -166,9 +166,10 @@ class Optimizer(object):
         hyp_params = [p for n, p in model.named_parameters() if p.requires_grad and isinstance(p, ManifoldParameter)]  # Hyperbolic parameters
 
         # Print the number of Euclidean and Hyperbolic parameters
-        print(f">> Number of Euclidean parameters: {sum(p.numel() for p in euc_params)}")
-        print(f">> Number of Hyperbolic parameters: {sum(p.numel() for p in hyp_params)}")
+        # print(f">> Number of Euclidean parameters: {sum(p.numel() for p in euc_params)}")
+        # print(f">> Number of Hyperbolic parameters: {sum(p.numel() for p in hyp_params)}")
         # Initialize Euclidean optimizer
+
         if euc_optimizer_type == 'adam':
             optimizer_euc = torch.optim.Adam(euc_params, lr=euc_lr, weight_decay=euc_weight_decay)
         elif euc_optimizer_type == 'sgd':

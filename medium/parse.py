@@ -13,7 +13,7 @@ def parser_add_main_args(parser):
     # dataset and evaluation
     parser.add_argument('--data_dir', type=str, default='../data', help='location of the data')
     parser.add_argument('--dataset', type=str, default='cora', help='name of dataset')
-    parser.add_argument('--sub_dataset', type=str, default='gcn_data', help='name of method')
+    parser.add_argument('--sub_dataset', type=str, default='gcn_data', help='name of sub dataset')
     parser.add_argument('--device', type=int, default=0, help='which gpu to use if any (default: 0)')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--cpu', type=int, default=0, help='use CPU instead of GPU')
@@ -40,7 +40,7 @@ def parser_add_main_args(parser):
 
     # gnn branch
     parser.add_argument('--use_graph', type=int, default=1, help='use graph encoder or not')
-    parser.add_argument('--graph_weight', type=float, default=0.8, help='weight for graph encoder')
+    parser.add_argument('--graph_weight', type=float, default=0.5, help='weight for graph encoder')
     parser.add_argument('--gnn_use_bn', type=int, default=1, help='use batchnorm for each GNN layer or not')
     parser.add_argument('--gnn_use_residual', type=int, default=1, help='use residual link for each GNN layer or not')
     parser.add_argument('--gnn_use_weight', type=int, default=0, help='use weight for GNN convolution')
@@ -48,7 +48,6 @@ def parser_add_main_args(parser):
     parser.add_argument('--gnn_use_act', type=int, default=1, help='use activation for each GNN layer or not')
     parser.add_argument('--gnn_num_layers', type=int, default=2, help='number of layers for GNN')
     parser.add_argument('--gnn_dropout', type=float, default=0.5)
-    parser.add_argument('--gnn_weight_decay', type=float, default=1e-3)
     parser.add_argument('--knn_num', type=int, default=5, help='number of k for KNN graph')
 
     # attention (Transformer) branch
@@ -59,9 +58,8 @@ def parser_add_main_args(parser):
     parser.add_argument('--trans_use_residual', type=int, default=0,
                         help='use residual link for each transformer layer or not')
     parser.add_argument('--trans_use_act', type=int, default=0, help='use activation for each transformer layer or not')
-    parser.add_argument('--trans_num_layers', type=int, default=2, help='number of layers for all-pair attention')
-    parser.add_argument('--trans_weight_decay', type=float, default=0.0,
-                        help='transformer weight decay (default to weight_decay)')
+    parser.add_argument('--trans_num_layers', type=int, default=1, help='number of layers for all-pair attention')
+
     parser.add_argument('--trans_dropout', type=float, default=0.0, help='transformer dropout')
     parser.add_argument('--k_in', type=float, default=1.0, help='manifold_in curvature')
     parser.add_argument('--k_hidden', type=float, default=1.0, help='Curvature for input layer (default: 1.0)')

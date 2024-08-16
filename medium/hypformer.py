@@ -5,8 +5,6 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_sparse import SparseTensor, matmul
-from torch_geometric.utils import degree
 from manifolds.hyp_layer import HypLinear, HypLayerNorm, HypActivation, HypDropout, HypCLS
 from manifolds.lorentz import Lorentz
 from geoopt import ManifoldParameter
