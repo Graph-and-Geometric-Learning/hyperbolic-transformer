@@ -55,6 +55,15 @@ To run the code:
    bash example/arxiv.sh
    bash example/proteins.sh
    ```
+   Navigate to the `medium` directory:
+      ```bash
+   cd medium
+   ```
+   ```bash
+   bash example/cora.sh
+   bash example/citeseer.sh
+   bash example/airport.sh
+   ```
 
 ## 4. Reuse Hyperbolic Transformer Modules
 
@@ -93,7 +102,7 @@ class HypLayerNorm(nn.Module):
 - `Hyperbolic Dropout Operations` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
 - `Hyperbolic Activation Operations` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
 - `Hyperbolic Classification Layer` in [hyp_layer.py](./Hypformer/manifolds/hyp_layer.py)
-- `Hyperbolic full/linear Attention` in [hypforemr.py](./Hypformer/hypformer.py)
+- `Hyperbolic full/linear Attention` in [hypformer.py](./Hypformer/hypformer.py)
 
 ## 5. Acknowledgments
 
