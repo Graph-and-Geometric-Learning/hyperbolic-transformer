@@ -6,19 +6,22 @@
 
 This is the PyTorch implementation of the paper ["Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space"](https://arxiv.org/abs/2407.01290) to be presented at KDD 2024.
 
-## Authors
 
 Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
+
+Arxiv: https://arxiv.org/abs/2407.01290
+
+Code: https://github.com/Graph-and-Geometric-Learning/hyperbolic-transformer
 
 ## Framework
 
 ![framework](./figures/framework.jpg)
 
-## Updates (August 16, 2024 🔥)
+## Updates (August 20, 2024 🔥)
 
 - [x] Large-scale graph evaluation
 - [x] Medium-scale graph evaluation
-- [ ] Image and text data evaluation
+- [ ] Image and text data evaluation (To be updated)
 - [x] Simplified version for reusage
 - [ ] Baselines (To be updated)
 
@@ -42,10 +45,7 @@ The code has been evaluated on NVIDIA A100 GPUs.
 
 To run the code:
 
-1. Navigate to the `large` or `medium` directory:
-   ```bash
-   cd large
-   ```
+1. Navigate to the `large` directory: `cd large`
 
 2. Check the `example` folder, where the `5-runs` folder contains scripts to get averaged results.
 
@@ -55,13 +55,12 @@ To run the code:
    bash example/arxiv.sh
    bash example/proteins.sh
    ```
-   Navigate to the `medium` directory:
-      ```bash
-   cd medium
-   ```
+4. Navigate to the `medium` directory: `cd medium`. For a single run, execute one of the following commands:
+
    ```bash
    bash example/cora.sh
    bash example/citeseer.sh
+   bash example/pubmed.sh
    bash example/airport.sh
    ```
 
