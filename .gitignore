@@ -1,4 +1,4 @@
 results
 wandb
-figures
 *__pycache__
+rsync_git.sh

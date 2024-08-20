@@ -1,0 +1,39 @@
+#!/bin/bash
+
+python main.py \
+    --dataset pubmed  \
+    --method hypformer \
+    --lr 0.005  \
+    --weight_decay 5e-4 \
+    --hidden_channels 256  \
+    --use_graph 1  \
+    --gnn_num_layers 4 \
+    --graph_weight 0.8 \
+    --gnn_use_residual 1  \
+    --gnn_use_weight 0 \
+    --gnn_dropout 0.5 \
+    --gnn_use_bn 0  \
+    --gnn_use_init 0  \
+    --gnn_use_act 0  \
+    --trans_num_layers 1  \
+    --trans_use_weight 1  \
+    --trans_use_act 0  \
+    --trans_dropout 0.5  \
+    --trans_use_residual 1  \
+    --rand_split_class 1  \
+    --valid_num 500  \
+    --test_num 1000  \
+    --no_feat_norm 1  \
+    --epochs 500 \
+    --seed 123  \
+    --device 0  \
+    --runs 1  \
+    --power_k 3.0  \
+    --k_in 1.0 \
+    --k_out 2.0 \
+    --attention_type linear_focused \
+    --decoder_type hyp  \
+    --hyp_lr 0.005  \
+    --hyp_weight_decay 5e-4  \
+    --data_dir ../data \
+    --save_result 0
