@@ -119,7 +119,13 @@ class TransConvLayer(nn.Module):
             attn_output = torch.cat([attn_output_time, attn_output], dim=-1)
 
             if output_attn:
-                return attn_output, attn_output
+                # Calculate attention weights
+                attention = torch.einsum('nhd,mhd->nmh', phi_qs, phi_ks)  # [N, M, H]
+                attention = attention / (denominator.unsqueeze(1) + 1e-6)  # Normalize
+
+                # Average attention across heads if needed
+                attention = attention.mean(dim=-1)  # [N, M]
+                return attn_output, attention
             else:
                 return attn_output
 

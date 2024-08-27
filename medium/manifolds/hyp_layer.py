@@ -9,8 +9,6 @@ from geoopt import ManifoldParameter
 from geoopt.optim.rsgd import RiemannianSGD
 from geoopt.optim.radam import RiemannianAdam
 
-
-
 class HypLayerNorm(nn.Module):
     def __init__(self, manifold, in_features, manifold_out=None):
         super(HypLayerNorm, self).__init__()
@@ -29,6 +27,7 @@ class HypLayerNorm(nn.Module):
         x_time = ((x_space**2).sum(dim=-1, keepdims=True) + self.manifold.k).sqrt()
         x = torch.cat([x_time, x_space], dim=-1)
 
+        # Adjust for a different manifold if specified
         if self.manifold_out is not None:
             x = x * (self.manifold_out.k / self.manifold.k).sqrt()
         return x
@@ -44,6 +43,8 @@ class HypNormalization(nn.Module):
         x_space = x_space / x_space.norm(dim=-1, keepdim=True)
         x_time = ((x_space**2).sum(dim=-1, keepdims=True) + self.manifold.k).sqrt()
         x = torch.cat([x_time, x_space], dim=-1)
+
+        # Adjust for a different manifold if specified
         if self.manifold_out is not None:
             x = x * (self.manifold_out.k / self.manifold.k).sqrt()
         return x
@@ -60,6 +61,8 @@ class HypActivation(nn.Module):
         x_space = self.activation(x_space)
         x_time = ((x_space**2).sum(dim=-1, keepdims=True) + self.manifold.k).sqrt()
         x = torch.cat([x_time, x_space], dim=-1)
+
+        # Adjust for a different manifold if specified
         if self.manifold_out is not None:
             x = x * (self.manifold_out.k / self.manifold.k).sqrt()
         return x
@@ -77,6 +80,8 @@ class HypDropout(nn.Module):
             x_space = self.dropout(x_space)
             x_time = ((x_space**2).sum(dim=-1, keepdims=True) + self.manifold.k).sqrt()
             x = torch.cat([x_time, x_space], dim=-1)
+
+            # Adjust for a different manifold if specified
             if self.manifold_out is not None:
                 x = x * (self.manifold_out.k / self.manifold.k).sqrt()
         return x
@@ -114,6 +119,8 @@ class HypLinear(nn.Module):
 
         x_time = ((x_space**2).sum(dim=-1, keepdims=True) + self.manifold.k).sqrt()
         x = torch.cat([x_time, x_space], dim=-1)
+
+        # Adjust for a different manifold if specified
         if self.manifold_out is not None:
             x = x * (self.manifold_out.k / self.manifold.k).sqrt()
         return x

@@ -140,6 +140,10 @@ for run in range(args.runs):
                   f'Valid: {100 * result[1]:.2f}%, '
                   f'Test: {100 * result[2]:.2f}%')
     logger.print_statistics(run)
+
+    if args.output_attention:
+        attentions = model.get_attentions(dataset.graph['node_feat'].to(device))
+        np.save(f'results/att/{args.dataset}_{args.method}_{args.hidden_channels}_attentions.npy', attentions.detach().cpu().numpy())
     # delete the model and optimizer and start a new run
     del model, optimizer
 

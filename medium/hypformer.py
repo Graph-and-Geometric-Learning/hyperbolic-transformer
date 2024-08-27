@@ -88,6 +88,7 @@ class TransConvLayer(nn.Module):
 
         phi_qs = (F.relu(qs) + 1e-6) / self.norm_scale.abs()  # [N, H, D]
         phi_ks = (F.relu(ks) + 1e-6) / self.norm_scale.abs()  # [N, H, D]
+        # v = (F.relu(v) + 1e-6) / self.norm_scale.abs()
 
         phi_qs = self.fp(phi_qs, p=self.power_k)  # [N, H, D]
         phi_ks = self.fp(phi_ks, p=self.power_k)  # [N, H, D]
@@ -117,8 +118,15 @@ class TransConvLayer(nn.Module):
         attn_output_time = ((attn_output ** 2).sum(dim=-1, keepdims=True) + self.manifold.k) ** 0.5
         attn_output = torch.cat([attn_output_time, attn_output], dim=-1)
 
+
         if output_attn:
-            return attn_output, attn_output
+            # Calculate attention weights
+            attention = torch.einsum('nhd,mhd->nmh', phi_qs, phi_ks)  # [N, M, H]
+            attention = attention / (denominator + 1e-6)  # Normalize
+
+            # Average attention across heads if needed
+            attention = attention.mean(dim=-1)  # [N, M]
+            return attn_output, attention
         else:
             return attn_output
 
@@ -237,18 +245,28 @@ class TransConv(nn.Module):
         x = self.fcs[-1](x)
         return x
 
-    def get_attentions(self, x):
+    def get_attentions(self, x_input):
         layer_, attentions = [], []
-        x = self.fcs[0](x)
+
+        # the original inputs are in Euclidean
+        x = self.fcs[0](x_input, x_manifold='euc')
+        # add positional embedding
+        if self.add_pos_enc:
+            x_pos = self.positional_encoding(x_input, x_manifold='euc')
+            x = self.manifold_in.mid_point(torch.stack((x, self.epsilon * x_pos), dim=1))
+
         if self.use_bn:
             x = self.bns[0](x)
-        x = self.activation(x)
+        if self.use_act:
+            x = self.activation(x)
+        if self.dropout_rate > 0:
+            x = self.dropout(x, training=self.training)
         layer_.append(x)
         for i, conv in enumerate(self.convs):
             x, attn = conv(x, x, output_attn=True)
             attentions.append(attn)
             if self.residual:
-                x = self.manifold.mid_point(torch.stack((x, layer_[i]), dim=1))
+                x = self.manifold_in.mid_point(torch.stack((x, layer_[i]), dim=1))
             if self.use_bn:
                 x = self.bns[i + 1](x)
             layer_.append(x)

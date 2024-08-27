@@ -68,6 +68,8 @@ def parser_add_main_args(parser):
     parser.add_argument('--attention_type', type=str, default='linear_focused',
                         help='attention type: linear_focused, or full')
     parser.add_argument('--add_positional_encoding', type=int, default=1, help='add positional encoding or not')
+    parser.add_argument('--output_attention', type=int, default=0, help='output attention or not')  # output_attention
+
     # training
     parser.add_argument('--patience', type=int, default=200, help='early stopping patience')
     parser.add_argument('--lr', type=float, default=0.01)

@@ -230,8 +230,8 @@ class Optimizer(object):
                       p.requires_grad and not isinstance(p, ManifoldParameter)]
         hyp_params = [p for n, p in model.named_parameters() if p.requires_grad and isinstance(p, ManifoldParameter)]
 
-        print(f">> Number of Euclidean parameters: {sum(p.numel() for p in euc_params)}")
-        print(f">> Number of Hyperbolic parameters: {sum(p.numel() for p in hyp_params)}")
+        # print(f">> Number of Euclidean parameters: {sum(p.numel() for p in euc_params)}")
+        # print(f">> Number of Hyperbolic parameters: {sum(p.numel() for p in hyp_params)}")
         self.optimizer = []  # Optimizers for Euclidean and Hyperbolic parts of the model
 
         if euc_params:
