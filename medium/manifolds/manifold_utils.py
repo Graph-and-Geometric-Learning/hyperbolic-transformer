@@ -77,6 +77,7 @@ def prod(items):
 
 
 def sign(x):
+    # Ensure sign is either +1 or -1, mapping zeros to +1.
     return torch.sign(x.sign() + 0.5)
 
 
