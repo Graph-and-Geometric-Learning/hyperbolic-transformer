@@ -19,7 +19,6 @@ python main.py \
   --runs 5 \
   --power_k 2.0 \
   --epochs 5000 \
-  --decoder hyp \
   --k_in 1.0 \
   --k_out 2.0 \
   --data_dir ../data \

@@ -1,36 +1,18 @@
-import torch
-import torch.nn as nn
+import torch.nn
 from typing import Tuple, Optional
+import manifolds.lmath as math
 import geoopt
 from geoopt import Manifold
 from geoopt import Lorentz as LorentzOri
 from geoopt.utils import size2shape
-import manifolds.lmath as math
-from manifolds.utils import acosh
-
-
-def arcosh(x: torch.Tensor) -> torch.Tensor:
-    """
-    Compute the inverse hyperbolic cosine (arcosh) of the input tensor.
-
-    Parameters:
-        x (torch.Tensor): Input tensor.
-
-    Returns:
-        torch.Tensor: The arcosh of the input tensor.
-    """
-    dtype = x.dtype
-    z = torch.sqrt(torch.clamp_min(x.pow(2) - 1.0, 1e-7))
-    return torch.log(x + z).to(dtype)
-
 
 class Lorentz(LorentzOri):
     def __init__(self, k=1.0, learnable=False):
         """
-        Initialize a Lorentz manifold with curvature k.
+        Initialize a Lorentz manifold with k, curvature is -1/k.
 
         Parameters:
-            k (float): Curvature of the manifold.
+            k (float): Curvature parameter of the manifold.
             learnable (bool): If True, k is learnable. Default is False.
         """
         super().__init__(k, learnable)
@@ -104,57 +86,89 @@ class Lorentz(LorentzOri):
         """
         return math.dist0(x, k=self.k, dim=dim, keepdim=keepdim)
 
-    def cdist(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def cdist(self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, keepdim=False) -> torch.Tensor:
         """
-        Compute the pairwise distance between points in x and y.
+        Compute pairwise distances between points in the Lorentz model.
 
-        Parameters:
-            x (torch.Tensor): First set of points.
-            y (torch.Tensor): Second set of points.
+        Parameters
+        ----------
+        x : torch.Tensor
+            Tensor of points on the manifold.
+        y : torch.Tensor
+            Tensor of points on the manifold.
+        dim : int
+            Dimension along which the computation is performed.
+        keepdim : bool
+            Whether to keep the reduced dimension.
 
-        Returns:
-            torch.Tensor: Pairwise distances between points in x and y.
+        Returns
+        -------
+        torch.Tensor
+            Pairwise distances between points.
         """
-        return math.cdist(x, y, k=self.k)
+        x = x.clone()
+        x.narrow(dim, 0, 1).mul_(-1)
+        return torch.sqrt(self.k) * math.acosh(-(x @ y.transpose(-1, -2)) / self.k)
 
-    def lorentz_to_klein(self, x: torch.Tensor) -> torch.Tensor:
+    def lorentz_to_klein(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """
-        Convert a point from Lorentz to Klein coordinates.
+        Convert points from Lorentz model to Klein model.
 
-        Parameters:
-            x (torch.Tensor): Point in Lorentz coordinates.
+        Parameters
+        ----------
+        x : torch.Tensor
+            Points in the Lorentz model.
+        dim : int
+            Dimension of the spatial coordinates.
 
-        Returns:
-            torch.Tensor: Point in Klein coordinates.
+        Returns
+        -------
+        torch.Tensor
+            Points in the Klein model.
         """
-        dim = x.shape[-1] - 1
-        return acosh(x.narrow(-1, 1, dim) / x.narrow(-1, 0, 1))
+        spatial_coords = x.narrow(dim, 1, x.size(dim) - 1)
+        time_like = x.narrow(dim, 0, 1)
+        klein_coords = spatial_coords / time_like
+        return klein_coords
 
-    def klein_to_lorentz(self, x: torch.Tensor) -> torch.Tensor:
+    def klein_to_lorentz(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """
-        Convert a point from Klein to Lorentz coordinates.
+        Convert points from Klein model to Lorentz model.
 
-        Parameters:
-            x (torch.Tensor): Point in Klein coordinates.
+        Parameters
+        ----------
+        x : torch.Tensor
+            Points in the Klein model.
+        dim : int
+            Dimension of the spatial coordinates.
 
-        Returns:
-            torch.Tensor: Point in Lorentz coordinates.
+        Returns
+        -------
+        torch.Tensor
+            Points in the Lorentz model.
         """
-        norm = (x * x).sum(dim=-1, keepdim=True)
-        size = x.shape[:-1] + (1,)
-        return torch.cat([x.new_ones(size), x], dim=-1) / torch.clamp_min(torch.sqrt(1 - norm), 1e-7)
+        norm = (x * x).sum(dim=dim, keepdim=True)
+        time_like = torch.sqrt(self.k * (1 + norm))  # Ensure time-like dimension > 1
+        spatial_coords = torch.sqrt(self.k) * x
+        return torch.cat([time_like, spatial_coords], dim=dim)
 
-    def lorentz_to_poincare(self, x: torch.Tensor) -> torch.Tensor:
+    def lorentz_to_poincare(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """
-        Convert a point from Lorentz to Poincare coordinates.
+        Convert points from Lorentz model to Poincare model.
 
-        Parameters:
-            x (torch.Tensor): Point in Lorentz coordinates.
+        Parameters
+        ----------
+        x : torch.Tensor
+            Points in the Lorentz model.
+        dim : int
+            Dimension of the coordinates.
 
-        Returns:
-            torch.Tensor: Point in Poincare coordinates.
+        Returns
+        -------
+        torch.Tensor
+            Points in the Poincare model.
         """
-        return math.lorentz_to_poincare(x, self.k)
+        return math.lorentz_to_poincare(x, self.k, dim=dim)
 
     def norm(self, u: torch.Tensor, *, keepdim=False, dim=-1) -> torch.Tensor:
         """
@@ -337,20 +351,30 @@ class Lorentz(LorentzOri):
         """
         return math.inner0(v, k=self.k, dim=dim, keepdim=keepdim)
 
-    def cinner(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def cinner(self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, keepdim=False) -> torch.Tensor:
         """
-        Compute the cross-inner product of two points.
+        Compute the Lorentzian inner product.
 
-        Parameters:
-            x (torch.Tensor): First point.
-            y (torch.Tensor): Second point.
+        Parameters
+        ----------
+        x : torch.Tensor
+            First tensor.
+        y : torch.Tensor
+            Second tensor.
+        dim : int
+            Dimension along which to compute.
+        keepdim : bool
+            Whether to keep the reduced dimension.
 
-        Returns:
-            torch.Tensor: Cross-inner product.
+        Returns
+        -------
+        torch.Tensor
+            Lorentzian inner product.
         """
         x = x.clone()
-        x.narrow(-1, 0, 1).mul_(-1)
-        return x @ y.transpose(-1, -2)
+        x.narrow(dim, 0, 1).mul_(-1)
+        return (x @ y.transpose(dim, -2)) / self.k
+
 
     def transp(self, x: torch.Tensor, y: torch.Tensor, v: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """
@@ -413,20 +437,27 @@ class Lorentz(LorentzOri):
         y = self.expmap(x, u, dim=dim, project=project)
         return self.transp(x, y, v, dim=dim)
 
-    def mobius_add(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def mobius_add(self, x: torch.Tensor, y: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """
-        Perform Mobius addition of two points.
+        Perform Möbius addition on the Lorentz manifold.
 
-        Parameters:
-            x (torch.Tensor): First point.
-            y (torch.Tensor): Second point.
+        Parameters
+        ----------
+        x : torch.Tensor
+            First tensor.
+        y : torch.Tensor
+            Second tensor.
+        dim : int
+            Dimension of the coordinates.
 
-        Returns:
-            torch.Tensor: Result of Mobius addition.
+        Returns
+        -------
+        torch.Tensor
+            Result of Möbius addition.
         """
-        v = self.logmap0(y)
-        v = self.transp0(x, v)
-        return self.expmap(x, v)
+        v = self.logmap0(y, dim=dim)
+        v = self.transp0(x, v, dim=dim)
+        return self.expmap(x, v, dim=dim)
 
     def geodesic_unit(self, t: torch.Tensor, x: torch.Tensor, u: torch.Tensor, *, dim=-1, project=True) -> torch.Tensor:
         """
@@ -493,33 +524,50 @@ class Lorentz(LorentzOri):
         zero_point[..., 0] = torch.sqrt(self.k)
         return geoopt.ManifoldTensor(zero_point, manifold=self)
 
-    def mid_point(self, x: torch.Tensor, w: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def mid_point(self, x: torch.Tensor, w: Optional[torch.Tensor] = None, *, dim=-1) -> torch.Tensor:
         """
-        Compute the midpoint of points on the manifold.
+        Compute the midpoint of points on the Lorentz manifold.
 
-        Parameters:
-            x (torch.Tensor): Points on the manifold.
-            w (torch.Tensor, optional): Weights for each point. Default is None.
+        Parameters
+        ----------
+        x : torch.Tensor
+            Points on the manifold.
+        w : Optional[torch.Tensor]
+            Weights for the midpoint computation.
+        dim : int
+            Dimension of the coordinates.
 
-        Returns:
-            torch.Tensor: Midpoint.
+        Returns
+        -------
+        torch.Tensor
+            Midpoint on the manifold.
         """
         if w is not None:
-            ave = w.matmul(x)
+            ave = w @ x
         else:
             ave = x.mean(dim=-2)
-        denom = (-self.inner(ave, ave, keepdim=True)).abs().clamp_min(1e-8).sqrt()
-        return self.k.sqrt() * ave / denom
+        denom = (-self.inner(ave, ave, dim=dim, keepdim=True))
+        denom = denom.abs().clamp_min(1e-8).sqrt()
+        return torch.sqrt(self.k) * ave / denom
 
-    def square_dist(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def square_dist(self, x: torch.Tensor, y: torch.Tensor, *, dim=-1, keepdim=True) -> torch.Tensor:
         """
-        Compute the squared distance between two points on the manifold.
+        Compute squared distances between points on the Lorentz manifold.
 
-        Parameters:
-            x (torch.Tensor): First point.
-            y (torch.Tensor): Second point.
+        Parameters
+        ----------
+        x : torch.Tensor
+            First tensor of points.
+        y : torch.Tensor
+            Second tensor of points.
+        dim : int
+            Dimension of the coordinates.
+        keepdim : bool
+            Whether to keep the reduced dimension.
 
-        Returns:
-            torch.Tensor: Squared distance between x and y.
+        Returns
+        -------
+        torch.Tensor
+            Squared distances between points.
         """
-        return -2 * self.k - 2 * self.inner(x, y, keepdim=True)
+        return -2 * self.k - 2 * self.inner(x, y, dim=dim, keepdim=keepdim)

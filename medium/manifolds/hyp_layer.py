@@ -3,7 +3,6 @@ import pdb
 import torch.nn as nn
 import torch.nn.functional
 import torch.nn.init as init
-from manifolds.lorentz import Lorentz
 import math
 from geoopt import ManifoldParameter
 from geoopt.optim.rsgd import RiemannianSGD
@@ -145,8 +144,10 @@ class HypCLS(nn.Module):
         if x_manifold != 'hyp':
             x = self.manifold.expmap0(torch.cat([torch.zeros_like(x)[..., 0:1], x], dim=-1))  # project to Lorentz
 
-        dist = -2 * self.manifold.k - 2 * self.cinner(x, self.cls) + self.bias
-        dist = dist.clamp(min=0)
+        dist = -2 * self.manifold.k - 2 * self.manifold.cinner(x, self.cls) + self.bias
+
+        # dist = self.manifold.cdist(x, self.cls) + self.bias
+        # dist = dist.clamp(min=1e-6)
 
         if return_type == 'neg_dist':
             return - dist
