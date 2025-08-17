@@ -5,3 +5,4 @@ rsync_git.sh
 .idea
 .deployignore
 local
+data

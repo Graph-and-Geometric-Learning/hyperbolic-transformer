@@ -4,12 +4,14 @@
 [![Conference](https://img.shields.io/badge/KDD-2024-blue)](https://kdd.org/kdd2024/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This is the PyTorch implementation of the paper ["Hypformer: Exploring Efficient Hyperbolic Transformer Fully in Hyperbolic Space"](https://arxiv.org/abs/2407.01290) to be presented at KDD 2024.
+This is the PyTorch implementation of the paper ["Hypformer: Exploring Efficient Transformer Fully in Hyperbolic Space"](https://dl.acm.org/doi/10.1145/3637528.3672039) to be presented at KDD 2024.
 
 
 Menglin Yang, Harshit Verma, Delvin Ce Zhang, Jiahong Liu, Irwin King, Rex Ying
 
 Arxiv: https://arxiv.org/abs/2407.01290
+
+ACM: https://dl.acm.org/doi/10.1145/3637528.3672039
 
 Code: https://github.com/Graph-and-Geometric-Learning/hyperbolic-transformer
 
@@ -17,11 +19,11 @@ Code: https://github.com/Graph-and-Geometric-Learning/hyperbolic-transformer
 
 ![framework](./figures/framework.jpg)
 
-## Updates (August 20, 2024 🔥)
+## Updates (August 17, 2025 🔥)
 
 - [x] Large-scale graph evaluation
 - [x] Medium-scale graph evaluation
-- [ ] Image and text data evaluation (To be updated)
+- [x] Image and text data evaluation
 - [x] Simplified version for reusage
 - [ ] Baselines (To be updated)
 
@@ -51,17 +53,17 @@ To run the code:
 
 3. For a single run, execute one of the following commands:
    ```bash
-   bash example/amazon2M.sh
-   bash example/arxiv.sh
-   bash example/proteins.sh
+   bash examples/amazon2M.sh
+   bash examples/arxiv.sh
+   bash examples/proteins.sh
    ```
 4. Navigate to the `medium` directory: `cd medium`. For a single run, execute one of the following commands:
 
    ```bash
-   bash example/cora.sh
-   bash example/citeseer.sh
-   bash example/pubmed.sh
-   bash example/airport.sh
+   bash examples/cora.sh
+   bash examples/citeseer.sh
+   bash examples/pubmed.sh
+   bash examples/airport.sh
    ```
 
 ## 4. Reuse Hyperbolic Transformer Modules

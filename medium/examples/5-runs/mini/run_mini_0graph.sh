@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# test accuracy on L40s: 0.8773
+# test accuracy on L40s: 87.73 ± 0.68 @ 2025-08-17
 
 python main.py \
     --dataset mini \

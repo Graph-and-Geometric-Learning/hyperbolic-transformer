@@ -5,23 +5,9 @@ import geoopt
 from geoopt import Manifold
 from geoopt import Lorentz as LorentzOri
 from geoopt.utils import size2shape
-import manifolds.lmath as math
+import manifolds.lorentz_math as math
 from manifolds.utils import acosh
 
-
-def arcosh(x: torch.Tensor) -> torch.Tensor:
-    """
-    Compute the inverse hyperbolic cosine (arcosh) of the input tensor.
-
-    Parameters:
-        x (torch.Tensor): Input tensor.
-
-    Returns:
-        torch.Tensor: The arcosh of the input tensor.
-    """
-    dtype = x.dtype
-    z = torch.sqrt(torch.clamp_min(x.pow(2) - 1.0, 1e-7))
-    return torch.log(x + z).to(dtype)
 
 
 class Lorentz(LorentzOri):
@@ -117,18 +103,36 @@ class Lorentz(LorentzOri):
         """
         return math.cdist(x, y, k=self.k)
 
-    def lorentz_to_klein(self, x: torch.Tensor) -> torch.Tensor:
+    def klein_to_lorentz(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """
-        Convert a point from Lorentz to Klein coordinates.
+        Convert points from Klein model to Lorentz model.
 
-        Parameters:
-            x (torch.Tensor): Point in Lorentz coordinates.
+        Parameters
+        ----------
+        x : torch.Tensor
+            Points in the Klein model.
+        dim : int
+            Dimension of the spatial coordinates.
 
-        Returns:
-            torch.Tensor: Point in Klein coordinates.
+        Returns
+        -------
+        torch.Tensor
+            Points in the Lorentz model.
         """
-        dim = x.shape[-1] - 1
-        return acosh(x.narrow(-1, 1, dim) / x.narrow(-1, 0, 1))
+        # Calculate the squared norm of the Klein points
+        u_norm_sq = (u * u).sum(dim=dim, keepdim=True)
+
+        # The denominator from the conversion formula
+        denominator = torch.sqrt(1 - u_norm_sq).clamp_min(eps)
+
+        # The scalar factor that multiplies the (1, u) vector
+        scalar = torch.sqrt(self.k) / denominator
+
+        # The first component of the Lorentz point is the scalar itself
+        time_like = scalar
+
+        # The spatial components are the scalar multiplied by the Klein vector
+        spatial_coords = scalar * u
 
     def klein_to_lorentz(self, x: torch.Tensor) -> torch.Tensor:
         """

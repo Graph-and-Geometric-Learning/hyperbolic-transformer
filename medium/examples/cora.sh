@@ -7,7 +7,7 @@ python main.py \
     --hidden_channels 256  \
     --use_graph 1  \
     --gnn_num_layers 3 \
-    --graph_weight 0.5 \
+    --graph_weight 0.8 \
     --weight_decay 0.005  \
     --gnn_use_residual 1  \
     --gnn_dropout 0.5 \

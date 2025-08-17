@@ -1,13 +1,15 @@
 import torch
-from manifolds.manifold_utils import acosh, sqrt, clamp
+from manifolds.manifold_utils import sqrt, clamp
+_EPS = {torch.float32: 1e-7, torch.float64: 1e-15}
 
 
 EXP_MAX_NORM = 10.
 
-def arcosh(x: torch.Tensor):
+def arcosh(x: torch.Tensor) -> torch.Tensor:
+    """Computes the inverse hyperbolic cosine safely."""
     dtype = x.dtype
-    z = torch.sqrt(torch.clamp_min(x.double().pow(2) - 1.0, 1e-15))
-    return torch.log(x + z).to(dtype)
+    z = torch.sqrt(torch.clamp_min(x.double().pow(2) - 1.0, _EPS[torch.float64]))
+    return torch.log(x.double() + z).to(dtype)
 
 def inner(u, v, *, keepdim=False, dim=-1):
     r"""
@@ -104,7 +106,7 @@ def dist(x, y, *, k, keepdim=False, dim=-1):
 
 def _dist(x, y, k: torch.Tensor, keepdim: bool = False, dim: int = -1):
     d = -_inner(x, y, dim=dim, keepdim=keepdim)
-    return acosh(d / k)
+    return torch.sqrt(k) * arcosh(d / k)
 
 
 def dist0(x, *, k, keepdim=False, dim=-1):
@@ -136,13 +138,17 @@ def _dist0(x, k: torch.Tensor, keepdim: bool = False, dim: int = -1):
     return torch.sqrt(k) * arcosh(d / k)
 
 
-def cdist(x: torch.Tensor, y: torch.Tensor, k: torch.Tensor):
-    # tmp = torch.ones(x.shape[-1], device=x.device)
-    # tmp[0] = -1
-    x = x.clone()
-    x.narrow(-1, 0, 1).mul_(-1)
-    return acosh(-(x @ y.transpose(-1, -2)))
 
+def cdist(x: torch.Tensor, y: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
+    """
+    Computes the pairwise geodesic distance between two sets of points x and y.
+    """
+    x_mod = x.clone()
+    x_mod.narrow(-1, 0, 1).mul_(-1)
+    inner_product = x_mod @ y.transpose(-1, -2)
+    arcosh_arg = -inner_product / k.clamp_min(_EPS[k.dtype])
+    distance = torch.sqrt(k) * arcosh(arcosh_arg)
+    return distance
 
 def project(x, *, k, dim=-1):
     r"""
@@ -342,13 +348,13 @@ def expmap0(u, *, k, dim=-1):
     return _expmap0(u, k, dim=dim)
 def _expmap0(u, k: torch.Tensor, dim: int = -1):
     nomin = _norm(u, keepdim=True, dim=dim)
-    u = u / nomin
+    u_norm = u / nomin.clamp_min(_EPS[u.dtype])
     nomin = nomin.clamp_max(EXP_MAX_NORM)
-
-    l_v = torch.cosh(nomin / torch.sqrt(k)) * torch.sqrt(k)
-    r_v = torch.sqrt(k) * torch.sinh(nomin / torch.sqrt(k)) * u
-    dn = r_v.size(dim) - 1
-    p = torch.cat((l_v + r_v.narrow(dim, 0, 1), r_v.narrow(dim, 1, dn)), dim)
+    sqrt_k = torch.sqrt(k)
+    scaled_nomin = nomin / sqrt_k
+    l_v = torch.cosh(scaled_nomin) * sqrt_k
+    p = torch.sinh(scaled_nomin) * sqrt_k * u_norm
+    p.narrow(dim, 0, 1).add_(l_v)
     return p
 
 
@@ -422,7 +428,7 @@ def _logmap0(y, k, dim: int = -1):
     dn = y.size(dim) - 1
     nomin = torch.cat((nomin_ + y.narrow(dim, 0, 1), y.narrow(dim, 1, dn)), dim)
     denom = _norm(nomin, keepdim=True)
-    return dist_ * nomin / denom
+    return dist_ * nomin / denom.clamp_min(_EPS[y.dtype])
 
 
 def logmap0back(x, *, k, dim=-1):
@@ -450,7 +456,7 @@ def _logmap0back(x, k, dim: int = -1):
     nomin_ = 1.0 / k * _inner0(x, k=k, keepdim=True) * x
     dn = nomin_.size(dim) - 1
     nomin = torch.cat(
-        (nomin_.narrow(dim, 0, 1) + 1, nomin_.narrow(dim, 1, dn)), dim
+        (nomin_.narrow(dim, 0, 1) + torch.sqrt(k), nomin_.narrow(dim, 1, dn)), dim
     )
     denom = _norm(nomin, keepdim=True)
     return dist_ * nomin / denom
@@ -513,15 +519,11 @@ def parallel_transport(x, y, v, *, k, dim=-1):
     return _parallel_transport(x, y, v, k=k, dim=dim)
 
 def _parallel_transport(x, y, v, k, dim: int = -1):
-    # lmap = _logmap(x, y, k=k, dim=dim)
-    # nom = _inner(lmap, v, keepdim=True)
-    # denom = _dist(x, y, k=k, dim=dim, keepdim=True) ** 2
-    # p = v - nom / denom * (lmap + _logmap(y, x, k=k, dim=dim))
-    # return p
-    nom = _inner(y, v, keepdim=True)
-    denom = torch.clamp_min(k - _inner(x, y, keepdim=True), 1e-7)
-    # return v + nom / denom * (x + y)
-    return v.addcmul(nom / denom, x + y)
+    lmap = _logmap(x, y, k=k, dim=dim)
+    nom = _inner(lmap, v, keepdim=True)
+    denom = _dist(x, y, k=k, dim=dim, keepdim=True) ** 2
+    p = v - nom / denom * (lmap + _logmap(y, x, k=k, dim=dim))
+    return p
 
 
 def parallel_transport0(y, v, *, k, dim=-1):
@@ -548,17 +550,11 @@ def parallel_transport0(y, v, *, k, dim=-1):
 
 
 def _parallel_transport0(y, v, k, dim: int = -1):
-    # lmap = _logmap0(y, k=k, dim=dim)
-    # nom = _inner(lmap, v, keepdim=True)
-    # denom = _dist0(y, k=k, dim=dim, keepdim=True) ** 2
-    # p = v - nom / denom * (lmap + _logmap0back(y, k=k, dim=dim))
-    # return p
-    nom = _inner(y, v, keepdim=True)
-    denom = torch.clamp_min(k - _inner0(y, k=k, keepdim=True), 1e-7)
-    zero_point = torch.zeros_like(y)
-    zero_point[..., 0] = 1
-    # return v + nom / denom * (y + zero_point)
-    return v.addcmul(nom / denom, y + zero_point)
+    lmap = _logmap0(y, k=k, dim=dim)
+    nom = _inner(lmap, v, keepdim=True)
+    denom = _dist0(y, k=k, dim=dim, keepdim=True) ** 2
+    p = v - nom / denom * (lmap + _logmap0back(y, k=k, dim=dim))
+    return p
 
 
 def parallel_transport0back(x, v, *, k, dim: int = -1):
@@ -586,17 +582,11 @@ def parallel_transport0back(x, v, *, k, dim: int = -1):
     return _parallel_transport0back(x, v, k=k, dim=dim)
 
 def _parallel_transport0back(x, v, k, dim: int = -1):
-    # lmap = _logmap0back(x, k=k, dim=dim)
-    # nom = _inner(lmap, v, keepdim=True)
-    # denom = _dist0(x, k=k, dim=dim, keepdim=True) ** 2
-    # p = v - nom / denom * (lmap + _logmap0(x, k=k, dim=dim))
-    # return p
-    nom = _inner0(v, k=k, keepdim=True)
-    denom = torch.clamp_min(k - _inner0(x, k=k, keepdim=True), 1e-7)
-    zero_point = torch.zeros_like(x)
-    zero_point[..., 0] = 1
-    # return v + nom / denom * (x + zero_point)
-    return v.addcmul(nom / denom, x + zero_point)
+    lmap = _logmap0back(x, k=k, dim=dim)
+    nom = _inner(lmap, v, keepdim=True)
+    denom = _dist0(x, k=k, dim=dim, keepdim=True) ** 2
+    p = v - nom / denom * (lmap + _logmap0(x, k=k, dim=dim))
+    return p
 
 
 def geodesic_unit(t, x, u, *, k):
@@ -627,8 +617,8 @@ def geodesic_unit(t, x, u, *, k):
 
 def _geodesic_unit(t, x, u, k):
     return (
-        torch.cosh(t) * x
-        + torch.sinh(t) * u
+        torch.cosh(t / torch.sqrt(k)) * x
+        + torch.sqrt(k) * torch.sinh(t / torch.sqrt(k)) * u
     )
 
 
@@ -655,7 +645,7 @@ def lorentz_to_poincare(x, k, dim=-1):
         points on the Poincare disk
     """
     dn = x.size(dim) - 1
-    return x.narrow(dim, 1, dn) / (x.narrow(dim, 0, 1) + torch.sqrt(self.k))
+    return x.narrow(dim, 1, dn) / (x.narrow(-dim, 0, 1) + torch.sqrt(k))
 
 
 def poincare_to_lorentz(x, k, dim=-1, eps=1e-6):
@@ -681,7 +671,9 @@ def poincare_to_lorentz(x, k, dim=-1, eps=1e-6):
         points on the Hyperboloid
     """
     x_norm_square = torch.sum(x * x, dim=dim, keepdim=True)
-    numerator = torch.cat((1 + x_norm_square, 2 * x), dim=dim)
-    denominator = 1.0 - x_norm_square + eps
-    res = torch.sqrt(k) * numerator / denominator
+    res = (
+        torch.sqrt(k)
+        * torch.cat((1 + x_norm_square, 2 * x), dim=dim)
+        / (1.0 - x_norm_square + eps)
+    )
     return res

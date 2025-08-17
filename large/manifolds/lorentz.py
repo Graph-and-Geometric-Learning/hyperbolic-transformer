@@ -1,6 +1,6 @@
 import torch.nn
 from typing import Tuple, Optional
-import manifolds.lmath as math
+import manifolds.lorentz_math as math
 import geoopt
 from geoopt import Manifold
 from geoopt import Lorentz as LorentzOri
@@ -147,10 +147,20 @@ class Lorentz(LorentzOri):
         torch.Tensor
             Points in the Lorentz model.
         """
-        norm = (x * x).sum(dim=dim, keepdim=True)
-        time_like = torch.sqrt(self.k * (1 + norm))  # Ensure time-like dimension > 1
-        spatial_coords = torch.sqrt(self.k) * x
-        return torch.cat([time_like, spatial_coords], dim=dim)
+        # Calculate the squared norm of the Klein points
+        u_norm_sq = (u * u).sum(dim=dim, keepdim=True)
+
+        # The denominator from the conversion formula
+        denominator = torch.sqrt(1 - u_norm_sq).clamp_min(eps)
+
+        # The scalar factor that multiplies the (1, u) vector
+        scalar = torch.sqrt(self.k) / denominator
+
+        # The first component of the Lorentz point is the scalar itself
+        time_like = scalar
+
+        # The spatial components are the scalar multiplied by the Klein vector
+        spatial_coords = scalar * u
 
     def lorentz_to_poincare(self, x: torch.Tensor, *, dim=-1) -> torch.Tensor:
         """

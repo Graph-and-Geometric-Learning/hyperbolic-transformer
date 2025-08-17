@@ -141,7 +141,7 @@ def cdist(x: torch.Tensor, y: torch.Tensor, k: torch.Tensor):
     # tmp[0] = -1
     x = x.clone()
     x.narrow(-1, 0, 1).mul_(-1)
-    return acosh(-(x @ y.transpose(-1, -2)))
+    return arcosh(-(x @ y.transpose(-1, -2)))
 
 
 def project(x, *, k, dim=-1):

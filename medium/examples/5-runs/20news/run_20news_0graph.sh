@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# test accuracy on L40s: 0.6853
+# test accuracy on L40s: 68.53 ± 0.44 @ 2025-08-17
 
 CUDA_VISIBLE_DEVICES=0 python main.py \
     --dataset 20news \
