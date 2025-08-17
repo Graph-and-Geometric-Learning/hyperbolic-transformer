@@ -42,9 +42,7 @@ def _inner(u, v, keepdim: bool = False, dim: int = -1):
             dim, 1, d
         ).sum(dim=dim, keepdim=False)
     else:
-        return torch.cat((-uv.narrow(dim, 0, 1), uv.narrow(dim, 1, d)), dim=dim).sum(
-            dim=dim, keepdim=True
-        )
+        return -uv.narrow(dim, 0, 1) + uv.narrow(dim, 1, d).sum(dim=dim, keepdim=True)
 
 
 def inner0(v, *, k, keepdim=False, dim=-1):

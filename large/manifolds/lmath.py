@@ -42,9 +42,7 @@ def _inner(u, v, keepdim: bool = False, dim: int = -1):
             dim, 1, d
         ).sum(dim=dim, keepdim=False)
     else:
-        return torch.cat((-uv.narrow(dim, 0, 1), uv.narrow(dim, 1, d)), dim=dim).sum(
-            dim=dim, keepdim=True
-        )
+        return -uv.narrow(dim, 0, 1) + uv.narrow(dim, 1, d).sum(dim=dim, keepdim=True)
 
 
 def inner0(v, *, k, keepdim=False, dim=-1):
@@ -106,7 +104,7 @@ def dist(x, y, *, k, keepdim=False, dim=-1):
 
 def _dist(x, y, k: torch.Tensor, keepdim: bool = False, dim: int = -1):
     d = -_inner(x, y, dim=dim, keepdim=keepdim)
-    return acosh(d / k)
+    return arcosh(d / k)
 
 
 def dist0(x, *, k, keepdim=False, dim=-1):

@@ -2,3 +2,6 @@ results
 wandb
 *__pycache__
 rsync_git.sh
+.idea
+.deployignore
+local
